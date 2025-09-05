@@ -48,7 +48,7 @@ const Docs2 = ({ onTotalDocsChange }) => {
     if (!commentText || !selectedDoc?.fileUrl) return;
 
     const projectId = JSON.parse(localStorage.getItem("selectedProjectId"));
-    const clientInfo = JSON.parse(localStorage.getItem("customerInfo"));
+    const clientInfo = JSON.parse(localStorage.getItem("customerInfo") || "{}");
 
     let windowsPath = selectedDoc.fileUrl;
     if (windowsPath.startsWith("/")) {
@@ -71,7 +71,14 @@ const Docs2 = ({ onTotalDocsChange }) => {
     const tempComment = {
       comment: commentText,
       createdAt: new Date().toISOString(),
-      customer: true, // Assuming comments from this UI are always from the customer
+      customer: {
+        full_name:
+          clientInfo?.full_name ||
+          clientInfo?.name ||
+          [clientInfo?.firstName, clientInfo?.lastName].filter(Boolean).join(" ") ||
+          "You",
+        email: clientInfo?.email || "",
+      },
     };
     setComments((prev) => [...prev, tempComment]);
     setNewComment("");
@@ -365,53 +372,53 @@ const Docs2 = ({ onTotalDocsChange }) => {
       onTotalDocsChange(totalComments);
     }
   }, [totalComments, onTotalDocsChange]);
-// Add this helper function within your Docs2 component, or as a standalone utility
-const getFileIcon = (fileName) => {
-  if (!fileName) return "Svg/PDF_file_icon.svg.png"; // Default icon for unknown/no file
+  // Add this helper function within your Docs2 component, or as a standalone utility
+  const getFileIcon = (fileName) => {
+    if (!fileName) return "Svg/PDF_file_icon.svg.png"; // Default icon for unknown/no file
 
-  const lowerCaseFileName = fileName.toLowerCase();
+    const lowerCaseFileName = fileName.toLowerCase();
 
-  if (lowerCaseFileName.endsWith(".pdf")) {
-    return "Svg/PDF_file_icon.svg.png"; // Path to your PDF icon
-  } else if (
-    lowerCaseFileName.endsWith(".jpg") ||
-    lowerCaseFileName.endsWith(".jpeg") ||
-    lowerCaseFileName.endsWith(".png") ||
-    lowerCaseFileName.endsWith(".gif") ||
-    lowerCaseFileName.endsWith(".bmp") ||
-    lowerCaseFileName.endsWith(".svg")
-  ) {
-    return "Svg/av5c8336583e291842624.png"; // Path to your image icon
-  } else if (
-    lowerCaseFileName.endsWith(".doc") ||
-    lowerCaseFileName.endsWith(".docx")
-  ) {
-    return "Svg/doc-icon.svg"; // Path to your Word document icon
-  } else if (
-    lowerCaseFileName.endsWith(".xls") ||
-    lowerCaseFileName.endsWith(".xlsx")
-  ) {
-    return "Svg/excel-icon.svg"; // Path to your Excel icon
-  } else if (
-    lowerCaseFileName.endsWith(".ppt") ||
-    lowerCaseFileName.endsWith(".pptx")
-  ) {
-    return "Svg/ppt-icon.svg"; // Path to your PowerPoint icon
-  } else if (
-    lowerCaseFileName.endsWith(".dwg") ||
-    lowerCaseFileName.endsWith(".dxf") ||
-    lowerCaseFileName.endsWith(".cad")
-  ) {
-    return "Svg/cad-file.svg"; // Path to your CAD icon
-  } else if (
-    lowerCaseFileName.endsWith(".zip") ||
-    lowerCaseFileName.endsWith(".rar")
-  ) {
-    return "Svg/zip-icon.svg"; // Path to your compressed file icon
-  } else {
-    return "Svg/av5c8336583e291842624.png"; // Generic file icon for other types
-  }
-};
+    if (lowerCaseFileName.endsWith(".pdf")) {
+      return "Svg/PDF_file_icon.svg.png"; // Path to your PDF icon
+    } else if (
+      lowerCaseFileName.endsWith(".jpg") ||
+      lowerCaseFileName.endsWith(".jpeg") ||
+      lowerCaseFileName.endsWith(".png") ||
+      lowerCaseFileName.endsWith(".gif") ||
+      lowerCaseFileName.endsWith(".bmp") ||
+      lowerCaseFileName.endsWith(".svg")
+    ) {
+      return "Svg/av5c8336583e291842624.png"; // Path to your image icon
+    } else if (
+      lowerCaseFileName.endsWith(".doc") ||
+      lowerCaseFileName.endsWith(".docx")
+    ) {
+      return "Svg/doc-icon.svg"; // Path to your Word document icon
+    } else if (
+      lowerCaseFileName.endsWith(".xls") ||
+      lowerCaseFileName.endsWith(".xlsx")
+    ) {
+      return "Svg/excel-icon.svg"; // Path to your Excel icon
+    } else if (
+      lowerCaseFileName.endsWith(".ppt") ||
+      lowerCaseFileName.endsWith(".pptx")
+    ) {
+      return "Svg/ppt-icon.svg"; // Path to your PowerPoint icon
+    } else if (
+      lowerCaseFileName.endsWith(".dwg") ||
+      lowerCaseFileName.endsWith(".dxf") ||
+      lowerCaseFileName.endsWith(".cad")
+    ) {
+      return "Svg/cad-file.svg"; // Path to your CAD icon
+    } else if (
+      lowerCaseFileName.endsWith(".zip") ||
+      lowerCaseFileName.endsWith(".rar")
+    ) {
+      return "Svg/zip-icon.svg"; // Path to your compressed file icon
+    } else {
+      return "Svg/av5c8336583e291842624.png"; // Generic file icon for other types
+    }
+  };
   return (
     <div>
       <div className={styles.container}>
@@ -446,28 +453,28 @@ const getFileIcon = (fileName) => {
                   {doc.files.some(
                     (file) =>
                       commentCounts[
-                        (file.url || file.filePath || file)?.replace(/^\//, "")
+                      (file.url || file.filePath || file)?.replace(/^\//, "")
                       ] > 0
                   ) && (
-                    <span
-                      className={styles.commentCount}
-                      style={{ color: "red", fontWeight: "bold" }}
-                    >
-                      (
-                      {doc.files.reduce(
-                        (sum, file) =>
-                          sum +
-                          (commentCounts[
-                            (file.url || file.filePath || file)?.replace(
-                              /^\//,
-                              ""
-                            )
-                          ] || 0),
-                        0
-                      )}
-                      )
-                    </span>
-                  )}
+                      <span
+                        className={styles.commentCount}
+                        style={{ color: "red", fontWeight: "bold" }}
+                      >
+                        (
+                        {doc.files.reduce(
+                          (sum, file) =>
+                            sum +
+                            (commentCounts[
+                              (file.url || file.filePath || file)?.replace(
+                                /^\//,
+                                ""
+                              )
+                            ] || 0),
+                          0
+                        )}
+                        )
+                      </span>
+                    )}
                 </div>
               ) : (
                 <div className={styles.noFile}>
@@ -602,9 +609,8 @@ const getFileIcon = (fileName) => {
                 <div
                   key={index}
                   ref={isLast ? bottomRef : null}
-                  className={`${styles.commentItem} ${
-                    isUser ? styles.right : styles.left
-                  }`}
+                  className={`${styles.commentItem} ${isUser ? styles.right : styles.left
+                    }`}
                 >
                   {!isUser && (
                     <div className={styles.adminBlock}>
@@ -646,9 +652,7 @@ const getFileIcon = (fileName) => {
                       <div className={styles.userBubble}>
                         <p>{item.comment}</p>
                       </div>
-                      <span
-                        className={`${styles.timestamp} ${styles.rightTime}`}
-                      >
+                      <span className={`${styles.timestamp} ${styles.rightTime}`}>
                         {new Date(item.createdAt)
                           .toLocaleString("en-GB", {
                             day: "2-digit",
@@ -658,9 +662,15 @@ const getFileIcon = (fileName) => {
                             hour12: true,
                           })
                           .replace(",", "")}
+                        &nbsp;•&nbsp;
+                        {item?.customer?.full_name ||
+                          item?.customer?.name ||
+                          item?.customer?.email ||
+                          "Customer"}
                       </span>
                     </div>
                   )}
+
                 </div>
               );
             })}
@@ -703,46 +713,46 @@ const getFileIcon = (fileName) => {
         height="90vh"
       >
         <div className={styles.modalInner}>
-  <h2 className={styles.modalTitle}>{currentDocTypeTitle} Files</h2>
-  <div className={styles.fileList}>
-    {currentDocTypeFiles.length > 0 ? (
-      currentDocTypeFiles.map((file, index) => {
-        const fileName =
-          file.name ||
-          file.url?.split("/").pop() ||
-          file.filePath?.split("/").pop() ||
-          `File ${index + 1}`;
-        const fileUrlForCount = file.url || file.filePath || file;
-        const normalizedFileUrlForCount = fileUrlForCount?.replace(/^\//, "");
+          <h2 className={styles.modalTitle}>{currentDocTypeTitle} Files</h2>
+          <div className={styles.fileList}>
+            {currentDocTypeFiles.length > 0 ? (
+              currentDocTypeFiles.map((file, index) => {
+                const fileName =
+                  file.name ||
+                  file.url?.split("/").pop() ||
+                  file.filePath?.split("/").pop() ||
+                  `File ${index + 1}`;
+                const fileUrlForCount = file.url || file.filePath || file;
+                const normalizedFileUrlForCount = fileUrlForCount?.replace(/^\//, "");
 
-        // Determine the icon based on the fileName
-        const iconSrc = getFileIcon(fileName);
+                // Determine the icon based on the fileName
+                const iconSrc = getFileIcon(fileName);
 
-        return (
-          <div
-            key={index}
-            className={styles.fileListItem}
-            onClick={() => handleFileClick(file)}
-          >
-            {/* Add the icon here */}
-            <img src={iconSrc} alt="file type icon" className={styles.fileIcon} />
-            <span>{fileName}</span>
-            {commentCounts[normalizedFileUrlForCount] > 0 && (
-              <span
-                className={styles.commentCount}
-                style={{ color: "red", fontWeight: "bold" }}
-              >
-                ({commentCounts[normalizedFileUrlForCount]})
-              </span>
+                return (
+                  <div
+                    key={index}
+                    className={styles.fileListItem}
+                    onClick={() => handleFileClick(file)}
+                  >
+                    {/* Add the icon here */}
+                    <img src={iconSrc} alt="file type icon" className={styles.fileIcon} />
+                    <span>{fileName}</span>
+                    {commentCounts[normalizedFileUrlForCount] > 0 && (
+                      <span
+                        className={styles.commentCount}
+                        style={{ color: "red", fontWeight: "bold" }}
+                      >
+                        ({commentCounts[normalizedFileUrlForCount]})
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <p>No files uploaded for this category yet.</p>
             )}
           </div>
-        );
-      })
-    ) : (
-      <p>No files uploaded for this category yet.</p>
-    )}
-  </div>
-</div>
+        </div>
       </Modal>
     </div>
   );

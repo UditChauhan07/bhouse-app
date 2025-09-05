@@ -142,7 +142,7 @@ const TeamMembers = () => {
           );
 
           const unreadComments = data.filter(comment => comment.createdByType == "user");
-          console.log({unreadComments})
+          console.log({ unreadComments })
           const filterIsReadFalse = unreadComments.filter((comment) => comment.isRead === false)
 
           return { id: user.id, commentCount: filterIsReadFalse.length };
@@ -153,8 +153,8 @@ const TeamMembers = () => {
       console.error("Error fetching visible user comment counts", err);
     }
   };
-  
-  console.log({visibleUsers})
+
+  console.log({ visibleUsers })
 
   return (
     <div>
@@ -187,16 +187,16 @@ const TeamMembers = () => {
                       <div className={styles.phone}>{user.mobileNumber}</div>
                     </div>
                     <div className={styles.buttons}>
-                    <button
-  onClick={() => {
-    if (user.mettingLink) {
-      window.open(user.mettingLink, '_blank'); // Opens in new tab
-    }
-  }}
-  className={styles.callBtn}
->
-  Book a Call
-</button>
+                      <button
+                        onClick={() => {
+                          if (user.mettingLink) {
+                            window.open(user.mettingLink, '_blank'); // Opens in new tab
+                          }
+                        }}
+                        className={styles.callBtn}
+                      >
+                        Book a Call
+                      </button>
                       <button
                         className={styles.msgBtn}
                         onClick={() => handleSendMessage(user)}
@@ -266,10 +266,10 @@ const TeamMembers = () => {
                   msg.createdByType === "customer" ? (
                     <div key={index} className={styles.userMessageRow}>
                       <div className={styles.right}>
-                        <div className={styles.messageBubbleUser}>
-                          {msg.comment}
-                        </div>
+                        <div className={styles.messageBubbleUser}>{msg.comment}</div>
                         <div className={styles.timestamp2}>
+                          <b>{msg.name || "Customer"}</b>
+                          {" "}
                           {new Date(msg.createdAt).toLocaleString()}
                         </div>
                       </div>
@@ -278,24 +278,18 @@ const TeamMembers = () => {
                   ) : (
                     <div key={index} className={styles.supportMessageRow}>
                       <img
-                        src={
-                          msg.profileImage
-                            ? `${url2}/${msg.profileImage}`
-                            : "Svg/user-icon.svg"
-                        }
+                        src={msg.profileImage ? `${url2}/${msg.profileImage}` : "Svg/user-icon.svg"}
                         alt="avatar"
                         className={styles.avatar}
                       />
                       <div>
                         <div className={styles.messageBubbleSupport}>
-                          <p> {msg.comment}</p>
+                          <p>{msg.comment}</p>
                         </div>
                         <br />
                         <div className={styles.superadmin}>
-                          {" "}
-                          <b>{msg.name}</b> ({msg.userRole})
+                          <b>{msg.name}</b> {msg.userRole ? `(${msg.userRole})` : ""}
                         </div>
-
                         <div className={styles.timestamp}>
                           {new Date(msg.createdAt).toLocaleString()}
                         </div>
@@ -303,6 +297,7 @@ const TeamMembers = () => {
                     </div>
                   )
                 )}
+
                 <div ref={messagesEndRef} />
               </div>
 

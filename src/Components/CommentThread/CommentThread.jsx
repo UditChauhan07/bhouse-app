@@ -4,14 +4,26 @@ import styles from '../CommentThread/CommentThread.module.css';
 import URL from '../../config/api';
 import { url2 } from '../../config/url';
 import Loader from '../Loader/Loader';
+
 const CommentThread = ({ issue }) => {
   const [comments, setComments] = useState([]);
   const [commentInput, setCommentInput] = useState('');
-  const customerInfo = JSON.parse(localStorage.getItem('customerInfo'));
+  const [loading, setLoading] = useState(false);
+
+  const customerInfo = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('customerInfo'));
+    } catch {
+      return null;
+    }
+  })();
+
   const isCustomer = !!customerInfo;
   const customerId = customerInfo?.id;
-  const messagesEndRef = useRef(null); // Ref to bottom
-  const [loading, setLoading] = useState(false);
+  const customerName = customerInfo?.full_name || 'You';
+  const customerPhoto = customerInfo?.profilePhoto || '';
+
+  const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -20,46 +32,53 @@ const CommentThread = ({ issue }) => {
   const fetchComments = async () => {
     try {
       const res = await axios.get(`${URL}/punchlist/${issue.id}/comments`);
-      setComments(res.data);
+      setComments(res.data || []);
     } catch (err) {
       console.error('Error fetching comments:', err);
     }
   };
-  const handleAddComment = async () => {
-    if (!commentInput.trim()) return;
-  
-    const tempComment = {
-      comment: commentInput,
-      createdByType: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-  
 
+  const handleAddComment = async () => {
+    const text = commentInput.trim();
+    if (!text) return;
+
+    const tempComment = {
+      id: `temp-${Date.now()}`,
+      comment: text,
+      createdAt: new Date().toISOString(),
+      createdByType: 'customer',
+      name: customerName,                
+      profileImage: customerPhoto,      
+      userRole: 'Customer',
+      isRead: false,
+      _optimistic: true,
+    };
+
+    setLoading(true);
     setComments((prev) => [...prev, tempComment]);
     setCommentInput('');
-    scrollToBottom(); 
-  
+    scrollToBottom();
+
     try {
       await axios.post(
         `${URL}/projects/${issue.projectId}/punchlist/${issue.id}/comments`,
         {
-          comment: commentInput,
+          comment: text,
           clientId: customerId,
         }
       );
-
-      fetchComments();
+      await fetchComments();
     } catch (err) {
       console.error('Error posting comment:', err);
+      await fetchComments();
+    } finally {
+      setLoading(false);
     }
   };
-  
-
 
   useEffect(() => {
     fetchComments();
   }, [issue.id]);
-
 
   useEffect(() => {
     scrollToBottom();
@@ -70,73 +89,47 @@ const CommentThread = ({ issue }) => {
       <div className={styles.header}>
         <p><b>Comments History</b></p>
       </div>
+
       <div className={styles.messages}>
-      {[...comments].reverse().map((msg, index) => (
+        {[...comments].reverse().map((msg, index) => {
+          const isUser = msg.createdByType === 'user';
+          const avatarSrc = msg.profileImage
+            ? `${url2}/${msg.profileImage}`
+            : 'Svg/user-icon.svg';
+          const timestamp = new Date(msg.createdAt).toLocaleString();
 
-
-          msg.createdByType === 'user' ? (
-            <div key={index} className={styles.supportMessageRow}>
-
+          return isUser ? (
+            // LEFT (staff/admin)
+            <div key={msg.id || index} className={styles.supportMessageRow}>
               <div className={styles.imageRow}>
-
-                <img
-                  src={
-                    msg.profileImage
-                      ? `${url2}/${msg.profileImage}`
-                      : "Svg/user-icon.svg"
-                  }
-                  alt="avatar"
-                  className={styles.avatar}
-                />
-
+                <img src={avatarSrc} alt="avatar" className={styles.avatar} />
               </div>
-
-
               <div>
                 <div className={styles.messageBubbleSupport}>{msg.comment}</div>
                 <div className={styles.timestamp}>
                   {msg.name}
-                  {msg.userRole ? ` (${msg.userRole})` : ''} • {new Date(msg.createdAt).toLocaleString()}
+                  {msg.userRole ? ` (${msg.userRole})` : ''} • {timestamp}
                 </div>
               </div>
             </div>
           ) : (
-            <div key={index} className={styles.userMessageRow}>
+            // RIGHT (customer)
+            <div key={msg.id || index} className={styles.userMessageRow}>
               <div className={styles.right}>
                 <div className={styles.messageBubbleUser}>{msg.comment}</div>
                 <div className={styles.timestamp2}>
-                  {new Date(msg.createdAt).toLocaleString()}
+                  {msg.name ? `${msg.name} • ` : ''}{timestamp}
                 </div>
               </div>
-              <div style={{ width: 40, marginLeft: 8 }}></div>
+              {/* <div className={styles.imageRow} style={{ marginLeft: 8 }}>
+                <img src={avatarSrc} alt="avatar" className={styles.avatar} />
+              </div> */}
             </div>
-          )
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* {isCustomer && (
-        <div className={styles.commentBox}>
-          <input
-            type="text"
-            placeholder="Comment or (Leave your thought here)"
-            className={styles.inputField}
-            value={commentInput}
-            onChange={(e) => setCommentInput(e.target.value)}
-          />
-          <button
-            className={styles.commentButton}
-            onClick={handleAddComment}
-            disabled={loading}
-          >
-            {loading ? <Loader size="30px" /> : "Add Comment"}
-          </button>
-
-        </div>
-      )} */}
-
-
-      {/* Ankush Code Start */}
       {isCustomer && (
         <div className={styles.commentBox}>
           <div className={styles.inputWrapper}>
@@ -147,28 +140,27 @@ const CommentThread = ({ issue }) => {
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddComment();
+                if (e.key === 'Enter' && !loading) handleAddComment();
               }}
+              disabled={loading}
             />
-            {commentInput.trim() && (
-              <div
-                className={styles.sendButton}
-                onClick={handleAddComment}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader size="20px" />
-                ) : (
+            <div
+              className={styles.sendButton}
+              onClick={() => !loading && handleAddComment()}
+              role="button"
+              aria-label="Send"
+            >
+              {loading ? (
+                <Loader size="20px" />
+              ) : (
+                commentInput.trim() && (
                   <img src="/Svg/send-icon.svg" alt="Send" className={styles.sendIcon} />
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
         </div>
       )}
-
-
-      {/* Ankush Code End */}
     </div>
   );
 };

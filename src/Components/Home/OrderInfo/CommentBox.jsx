@@ -19,43 +19,52 @@ function CommentBox({ saman }) {
   const customerId = customerInfo?.id;
   const projectId = JSON.parse(localStorage.getItem("selectedProjectId"));
   const messagesEndRef = useRef(null);
-// const isInitialLoad = useRef(true);
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-  
-//  useEffect(() => {
-//   if (isInitialLoad.current) {
-//     isInitialLoad.current = false;
-//     return; 
-//   }
-//   scrollToBottom();
-// }, [comments]);
-  
+
   const fetchComments = async () => {
     try {
       const res = await axios.get(`${URL}/items/${item.id}/comments`);
-      setComments(res.data);
+      // ensure oldest → newest so latest is at the bottom
+      const sorted = [...res.data].sort(
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      );
+      setComments(sorted);
+      // jump to bottom after initial load / refresh
+      setTimeout(scrollToBottom, 0);
     } catch (err) {
       console.error("Error fetching comments:", err);
     }
   };
 
+  const getCustomerDisplayName = () =>
+    customerInfo?.name ||
+    customerInfo?.fullName ||
+    customerInfo?.firstName ||
+    customerInfo?.displayName ||
+    "You";
+
   const handleSubmit = async () => {
     if (!newComment.trim()) return;
-  
+
     const now = new Date().toISOString();
     const tempComment = {
       comment: newComment,
       createdById: customerId,
+      createdByType: "customer",
+      createdByName: getCustomerDisplayName(), // make sure name shows immediately
+      userRole: "Customer",
+      profilePhoto: customerInfo?.profilePhoto || null,
       createdAt: now,
     };
-  
-    setComments((prev) => [...prev, tempComment]); // Add at the end
+
+    setComments((prev) => [...prev, tempComment]); // add to bottom
     setNewComment("");
     setLoading(true);
     scrollToBottom();
-  
+
     try {
       await axios.post(`${URL}/items/${item.id}/comments`, {
         projectId,
@@ -69,7 +78,7 @@ function CommentBox({ saman }) {
       setLoading(false);
     }
   };
-  
+
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString("en-US", {
@@ -83,7 +92,8 @@ function CommentBox({ saman }) {
 
   useEffect(() => {
     if (item?.id) fetchComments();
-  }, [item]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
 
   return (
     <div className={styles.container2}>
@@ -93,21 +103,22 @@ function CommentBox({ saman }) {
         <div className={styles.CommentInner}>
           {comments.map((cmt, idx) =>
             cmt.createdById === customerId ? (
-              <div key={idx} className={styles.Usercomment}>
+              <div key={cmt.id ?? idx} className={styles.Usercomment}>
                 <div className={styles.UsercommentMain}>
                   <div className={styles.UsercommentText}>
                     <p className={styles.Userpara}>{cmt.comment}</p>
                   </div>
-                  <p className={styles.UserBTime}>{formatTime(cmt.createdAt)}</p>
+                  {/* show customer name + time */}
+                  <p className={styles.UserBTime}>
+                    {cmt.createdByName || getCustomerDisplayName()} · {formatTime(cmt.createdAt)}
+                  </p>
                 </div>
               </div>
             ) : (
-              <div key={idx} className={styles.BHousecomment}>
+              <div key={cmt.id ?? idx} className={styles.BHousecomment}>
                 <img
                   src={
-                    cmt.profilePhoto
-                      ? `${url2}/${cmt.profilePhoto}`
-                      : "/Svg/ChatBHouse.svg"
+                    cmt.profilePhoto ? `${url2}/${cmt.profilePhoto}` : "/Svg/ChatBHouse.svg"
                   }
                   alt="chat"
                 />
@@ -140,11 +151,7 @@ function CommentBox({ saman }) {
         ></textarea>
 
         {newComment.trim() && (
-          <div
-            className={styles.CommenrButton}
-            onClick={handleSubmit}
-            disabled={loading}
-          >
+          <div className={styles.CommenrButton} onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <Loader size="30px" />
             ) : (
